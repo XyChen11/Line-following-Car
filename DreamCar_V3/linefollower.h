@@ -124,7 +124,7 @@
 #define SINGLE_STABLE_DELTA_MAX       8
 
 // 黑线段接近图像边缘的容差，用于判断线是否“贴边”。
-#define EDGE_TOUCH_MARGIN             5
+#define EDGE_TOUCH_MARGIN             2
 
 // =========================
 // 路口处理状态机
@@ -174,6 +174,10 @@ extern int main_center;                       // 当前帧主黑线中心
 extern int road_type;                         // 当前帧道路类型
 extern TrackContext ctx;                      // 跨帧历史上下文
 
+extern int cross_count;
+extern int left_turn_count;
+extern int right_turn_count;
+
 // PID 控制器及其输入输出变量。
 extern PID myPID;
 extern double Kp, Ki, Kd;
@@ -184,7 +188,9 @@ extern double output;
 // 路口状态机变量。
 extern int junction_state;
 extern unsigned long junction_start_time;
+extern unsigned long second_cross_start_time;
 extern const unsigned long JUNCTION_DURATION;
+extern const unsigned long FORBIDDEN_DURATION;
 
 // 四电机 PWM 输出，由 DreamCar.ino 计算并写入。
 extern int pwm_out[4];
@@ -207,4 +213,3 @@ void PrintDebug();
 void setMotor(float pwm, int IN1, int IN2, int PWMpin);
 
 #endif
-

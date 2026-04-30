@@ -33,11 +33,12 @@ PID myPID(&input, &output, &setpoint, Kp, Ki, Kd, DIRECT);
 // 路口状态机变量。
 int junction_state = STATE_LINE_FOLLOW;
 unsigned long junction_start_time = 0;
+unsigned long second_cross_start_time = 0;
 
 // 路口固定动作持续时间，单位 ms。
 // 例如进入左转状态后，会以固定角速度转 900ms，然后回到巡线。
-const unsigned long JUNCTION_DURATION = 900;
-
+const unsigned long JUNCTION_DURATION = 220;
+const unsigned long FORBIDDEN_DURATION = 20;
 void GetFrame() {
   // 线阵 CCD 的读法是：
   // 1. 用 SI 信号启动一帧采样；
@@ -83,6 +84,7 @@ void GetFrame() {
   delayMicroseconds(5);
 }
 
+
 void ComputeThreshold() {
   // 动态阈值法：
   // 当前帧中最亮值和最暗值的平均值作为黑白分界。
@@ -104,6 +106,7 @@ void ComputeThreshold() {
   threshold = (min_val + max_val) / 2;
 }
 
+
 void Binarize() {
   // 对阈值做限幅，避免画面过暗或过亮时阈值极端化。
   if (threshold < 30) threshold = 30;
@@ -118,6 +121,7 @@ void Binarize() {
     }
   }
 }
+
 
 void FindBlackLines() {
   // 在 binary_buffer 中寻找连续的 BLACK 区域。
@@ -151,6 +155,7 @@ void FindBlackLines() {
   line_count = count;
 }
 
+
 int SelectMainCenter() {
   // 如果没有任何有效黑线，则返回 -1 表示丢线。
   if (line_count <= 0) {
@@ -173,6 +178,7 @@ int SelectMainCenter() {
   return lines[best_idx].center;
 }
 
+
 void UpdateHistory() {
   // 使用环形数组保存最近 HISTORY_DEPTH 帧主线中心。
   // main_center 为 -1 时也会写入，表示这一帧丢线。
@@ -180,12 +186,13 @@ void UpdateHistory() {
   ctx.history_index = (ctx.history_index + 1) % HISTORY_DEPTH;
 }
 
+
 void RecognizeRoad() {
   // 根据黑线段数量进入不同识别分支：
   // 0 条：丢线；
   // 1 条：普通直/弯道、直角弯、十字路口入口；
-  // 2 条：T/Y 路口、分裂线或噪声；
-  // 3 条及以上：通常认为是十字路口或复杂交叉。
+  // 2 条：Y 路口、分裂线或噪声；
+  // 3 条及以上：通常认为是T型路口、十字路口或复杂交叉。
 
   if (line_count == 0) {
     // 当前帧完全没有黑线。
@@ -208,7 +215,7 @@ void RecognizeRoad() {
 
     // 偏差定义为 CAR_CENTER - center。
     // center 在右侧时 dev 为负，center 在左侧时 dev 为正。
-    int current_dev = -(center - CAR_CENTER);
+    int current_dev = CAR_CENTER - center;
 
     // 当前中心相对上一帧中心的变化量。
     // 跳变较大且线段贴边，通常说明进入了直角弯入口。
@@ -255,8 +262,8 @@ void RecognizeRoad() {
 
   if (line_count == 2) {
     // 两条黑线可能表示：
-    // 1. T/Y 路口中主路和岔路同时出现；
-    // 2. 一条线被噪声切裂成两段；
+    // 1. Y 路口中主路和岔路同时出现；
+    // 2. 一条线被反光切裂成两段；
     // 3. 复杂路口的一部分。
 
     // 先按中心位置区分左右线段。
@@ -338,6 +345,15 @@ void PrintDebug() {
   Serial.print(" ");
   Serial.print("road_type:");
   Serial.print(road_type);
+  Serial.print(" ");
+  Serial.print("cross_count:");
+  Serial.print(cross_count);
+  Serial.print(" ");
+  Serial.print("left_turn_count:");
+  Serial.print(left_turn_count);
+  Serial.print(" ");
+  Serial.print("right_turn_count:");
+  Serial.print(right_turn_count);
   Serial.println(" ");
 
   // 完整二值化图像很长，打印会显著拖慢控制循环。
@@ -351,4 +367,3 @@ void PrintDebug() {
   Serial.print("\n");
   #endif
 }
-
