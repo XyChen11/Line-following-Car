@@ -82,7 +82,7 @@ void setup() {
   pinMode(DIN2, OUTPUT);
 
   // 串口用于调试输出。
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop() {
@@ -267,7 +267,7 @@ void HandleLineFollowState(MotionCommand &cmd) {
     if (millis() - second_cross_start_time < FORBIDDEN_DURATION && right_turn_count == 1) {
       BeginJunction(STATE_LINE_FOLLOW);
       junction_delete = 1;
-      right_turn_count == 0;
+      right_turn_count = 0;
     }
     // // 第一个右转路口直行，不右转
     // if (right_turn_count == 1) {

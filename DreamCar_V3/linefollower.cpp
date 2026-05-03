@@ -50,11 +50,10 @@ void GetFrame() {
   digitalWrite(TSL_SI, LOW);
   delayMicroseconds(5);
   digitalWrite(TSL_SI, HIGH);
-  delayMicroseconds(25);
+  delayMicroseconds(5);
   digitalWrite(TSL_CLK, HIGH);
   delayMicroseconds(5);
   digitalWrite(TSL_SI, LOW);
-  delayMicroseconds(5);
 
   // 临时保存完整 128 像素。
   // 后面会丢弃前 15 个不稳定像素，只保留 PIXEL_COUNT 个有效像素。
@@ -77,10 +76,9 @@ void GetFrame() {
     pixel_buffer[i] = temp_buffer[i + 15];
   }
 
-  // 额外给一个时钟脉冲，使 CCD 输出进入下一轮准备状态。
+  // 循环内最后一次上升沿已经是手册要求的第 129 个时钟，
+  // 用于终止第 128 个像素输出并让内部逻辑回到已知状态。
   digitalWrite(TSL_CLK, LOW);
-  delayMicroseconds(5);
-  digitalWrite(TSL_CLK, HIGH);
   delayMicroseconds(5);
 }
 
@@ -110,7 +108,7 @@ void ComputeThreshold() {
 void Binarize() {
   // 对阈值做限幅，避免画面过暗或过亮时阈值极端化。
   if (threshold < 30) threshold = 30;
-  if (threshold > 130) threshold = 130;
+  if (threshold > 200) threshold = 200;
 
   // 大于等于阈值认为是白底，小于阈值认为是黑线。
   for (int i = 0; i < PIXEL_COUNT; i++) {
@@ -223,8 +221,8 @@ void RecognizeRoad() {
 
     bool touch_left = (start <= EDGE_TOUCH_MARGIN);
     bool touch_right = (end >= (PIXEL_COUNT - 1 - EDGE_TOUCH_MARGIN));
-    bool strong_jump_right = (current_delta >= 20);
-    bool strong_jump_left = (current_delta <= -20);
+    bool strong_jump_right = (current_delta >= 18);
+    bool strong_jump_left = (current_delta <= -18);
     bool very_wide = (width >= SINGLE_CROSS_WIDTH_THRESHOLD);
     bool wide_turn = ((width >= SINGLE_TURN_WIDTH_THRESHOLD) && (width < SINGLE_CROSS_WIDTH_THRESHOLD));
 
@@ -232,12 +230,12 @@ void RecognizeRoad() {
     // 1. 线中心相对上一帧明显跳变；
     // 2. 黑线区域贴到图像边缘；
     // 3. 线宽达到直角弯阈值，但没有宽到十字路口阈值。
-    if (((strong_jump_right || strong_jump_left) && (touch_left || touch_right)) && wide_turn) {
-      if (strong_jump_right) {
+    if ((touch_left || touch_right) && wide_turn) {
+      if (touch_right) {
         road_type = ROAD_RIGHT_TURN;
         dev = current_dev;
       }
-      if (strong_jump_left) {
+      if (touch_left) {
         road_type = ROAD_LEFT_TURN;
         dev = current_dev;
       }

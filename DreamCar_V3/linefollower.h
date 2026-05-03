@@ -86,7 +86,7 @@
 
 // 是否打印完整二值化图像。
 // 0: 只打印核心调试量；1: 额外打印 113 个黑白像素值。
-#define DEBUG_PRINT_BINARY 0
+#define DEBUG_PRINT_BINARY 1
 
 // =========================
 // 二值化像素值
@@ -118,7 +118,7 @@
 #define SINGLE_TURN_WIDTH_THRESHOLD   45
 
 // 单黑线非常宽时，通常说明进入十字路口或大面积交叉区域。
-#define SINGLE_CROSS_WIDTH_THRESHOLD  90
+#define SINGLE_CROSS_WIDTH_THRESHOLD  100
 
 // 判断十字路口时，中心点变化不能太大，否则更可能是急转弯。
 #define SINGLE_STABLE_DELTA_MAX       8
